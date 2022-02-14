@@ -64,17 +64,19 @@ class CustomImageDataset(Dataset):
             rev = os.path.join(root_dir,dir,rev_dir,'data_phase.npy' if is_test else 'Reverberated/data_phase.npy' )
             a = np.load(rev)
             if self.revs is None:
-                self.revs = np.copy(a)
+                self.revs = np.copy(a[:,:,:126])
             else:
-                self.revs = np.vstack((self.revs,a))
+                self.revs = np.vstack((self.revs,a[:,:,:126]))
+            self.revs = np.vstack((self.revs,a[:,:,126:]))
             target = os.path.join(root_dir,dir,target_dir,'data_phase.npy')
             b = np.load(target)
             if self.targets is None:
-                self.targets = np.copy(b)
+                self.targets = np.copy(b[:,:,:126])
             else:
-                self.targets = np.vstack((self.targets,b))
-                
+                self.targets = np.vstack((self.targets,b[:,:,:126]))
+            self.targets = np.vstack((self.targets,b[:,:,:126]))
 
+        
     def __len__(self):
         return self.targets.shape[0]
 
@@ -83,12 +85,8 @@ class CustomImageDataset(Dataset):
         target_image = self.targets[idx, :, :]
         return torch.from_numpy(reverberated_image), torch.from_numpy(target_image)
 
-
-# LOAD DATA
-
 training_data = CustomImageDataset(root_dir)
 test_data = CustomImageDataset(root_dir, is_test=True)
-
 
 train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
@@ -97,9 +95,24 @@ test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
 
 # Plot a training image
-real_batch = next(iter(train_dataloader))
-plt.figure(figsize=(8,8))
-plt.axis("off")
-plt.title("Training Images")
-plt.imshow(real_batch[0][0,:,:])
+from mpl_toolkits.axes_grid1 import ImageGrid
+
+train_rev, train_target = next(iter(train_dataloader))
+fig = plt.figure(figsize=(5., 10))
+
+
+grid = ImageGrid(fig, 111,  # similar to subplot(111)
+                 nrows_ncols=(10, 2),  # creates 2x2 grid of axes
+                 axes_pad=0.1,  # pad between axes in inch.
+                 )
+
+l = []
+for i in range(10):
+	l.append(train_rev[i])
+	l.append(train_target[i])
+
+for ax, im in zip(grid, l):
+    # Iterating over the grid returns the Axes.
+    ax.imshow(im)
+
 plt.show()
