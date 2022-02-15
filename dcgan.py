@@ -46,6 +46,7 @@ class Generator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ngf) x 32 x 32
             nn.ConvTranspose2d(ngf, nc, 3, 1, 1, bias=False),
+            nn.AvgPool2d(3,1,1),
             nn.Tanh()
             # state size. (nc) x 64 x 64
         )
