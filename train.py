@@ -1,3 +1,4 @@
+import torchvision.transforms as transforms
 from dcgan import Generator, Discriminator, weights_init
 from reader import CustomImageDataset
 from torch.utils.data import DataLoader
@@ -17,7 +18,7 @@ workers = 2
 batch_size = 64
 
 # Number of training epochs
-num_epochs = 5
+num_epochs = 20
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -44,6 +45,30 @@ train_dataloader = DataLoader(
 test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
 
+# # Plot a training image
+# from mpl_toolkits.axes_grid1 import ImageGrid
+
+# train_rev, train_target = next(iter(train_dataloader))
+# fig = plt.figure(figsize=(5., 10))
+
+
+# grid = ImageGrid(fig, 111,  # similar to subplot(111)
+#                  nrows_ncols=(10, 2),  # creates 2x2 grid of axes
+#                  axes_pad=0.1,  # pad between axes in inch.
+#                  )
+
+# l = []
+# for i in range(10):
+# 	l.append(train_rev[i])
+# 	l.append(train_target[i])
+
+# for ax, im in zip(grid, l):
+#     # Iterating over the grid returns the Axes.
+#     ax.imshow(im)
+
+# plt.show()
+
+
 gen = Generator(ngpu).to(device)
 disc = Discriminator(ngpu).to(device)
 gen.apply(weights_init)
@@ -55,14 +80,15 @@ criterion = nn.BCELoss()
 
 # Create batch of latent vectors that we will use to visualize
 #  the progression of the generator
-fixed_noise = torch.randn(64, nz, 1, 1, device=device)
+fixed_noise = torch.randn(batch_size, nz, 1, 1, device=device)
 
 # Establish convention for real and fake labels during training
 real_label = 1.
 fake_label = 0.
 
 # Setup Adam optimizers for both G and D
-optimizerD = optim.Adam(disc.parameters(), lr=lr, betas=(beta1, 0.999))
+# optimizerD = optim.Adam(disc.parameters(), lr=lr, betas=(beta1, 0.999))
+optimizerD = optim.SGD(disc.parameters(), lr=lr, momentum=0.9)
 optimizerG = optim.Adam(gen.parameters(), lr=lr, betas=(beta1, 0.999))
 
 
@@ -86,7 +112,7 @@ for epoch in range(num_epochs):
         # Train with all-real batch
         disc.zero_grad()
         # Format batch
-        train_rev =  data[0].reshape(-1,1,7,126).float().to(device)
+        train_rev =  data[1].reshape(-1,1,7,126).float().to(device)
         # real_cpu = data[0].to(device)
         b_size = train_rev.size(0)
         label = torch.full((b_size,), real_label,
@@ -175,8 +201,8 @@ grid = ImageGrid(fig, 111,  # similar to subplot(111)
 l = []
 for i in range(10):
     with torch.no_grad():
-        noise = torch.randn(1, nz, 1, 1, device=device)
-        fake = gen(noise).detach().cpu().numpy().reshape(7, 126)
+        # noise = torch.randn(1, nz, 1, 1, device=device)
+        fake = gen(fixed_noise[i,:,:,:].unsqueeze(0)).detach().cpu().numpy().reshape(7, 126)
     l.append(fake)
 
 
