@@ -129,10 +129,11 @@ class Pix2Pix(pl.LightningModule):
         
         if (self.current_epoch + 1)%self.display_step==0 and batch_idx==0 and optimizer_idx==1:
             fake = self.gen(condition).detach()
-            # display_progress(condition[0], fake[0], real[0])
-            writer.add_graph(self.gen, condition)
-            writer.add_image('Four Fashion-MNIST Images', torch.hstack((condition[0],fake[0], real[0])))
-            writer.flush()
+            display_progress(condition[0], fake[0], real[0])
+            
+            # writer.add_graph(self.gen, condition)
+            # writer.add_image('condition-fake-real', torch.hstack((condition[0].squeeze(),fake[0].squeeze(), real[0].squeeze())))
+            # writer.flush()
             torch.save({'epoch': self.current_epoch,'model_state_dict': self.gen.state_dict(), \
                 'optimizer_state_dict': self.gen_opt.state_dict(),'loss': self.errG,}, \
                      f'Generator_Epoch_{self.current_epoch}_loss_{float(self.errG)}.pt')
