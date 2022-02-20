@@ -1,4 +1,3 @@
-import torchvision.transforms as transforms
 from dcgan import Generator, Discriminator, weights_init
 from reader import CustomImageDataset
 from torch.utils.data import DataLoader
@@ -29,8 +28,19 @@ beta1 = 0.5
 # Number of GPUs available. Use 0 for CPU mode.
 ngpu = 1
 
+
+# Number of channels in the training images. For color images this is 3
+nc = 1
+
 # Size of z latent vector (i.e. size of generator input)
-nz = 16
+nz = 14
+
+# Size of feature maps in generator
+ngf = 16
+
+# Size of feature maps in discriminator
+ndf = 16
+
 
 # Decide which device we want to run on
 device = torch.device("cuda:0" if (
@@ -46,21 +56,21 @@ test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
 
 # # Plot a training image
-# from mpl_toolkits.axes_grid1 import ImageGrid
 
 # train_rev, train_target = next(iter(train_dataloader))
 # fig = plt.figure(figsize=(5., 10))
 
 
 # grid = ImageGrid(fig, 111,  # similar to subplot(111)
-#                  nrows_ncols=(10, 2),  # creates 2x2 grid of axes
+#                  nrows_ncols=(5, 1),  # creates 2x2 grid of axes
 #                  axes_pad=0.1,  # pad between axes in inch.
 #                  )
 
 # l = []
-# for i in range(10):
-# 	l.append(train_rev[i])
-# 	l.append(train_target[i])
+# for i in range(5):
+#     l.append(torch.hstack((train_rev[i].squeeze(),train_target[i].squeeze())))
+# 	# l.append(train_rev[i])
+# 	# l.append(train_target[i])
 
 # for ax, im in zip(grid, l):
 #     # Iterating over the grid returns the Axes.
@@ -88,7 +98,7 @@ fake_label = 0.
 
 # Setup Adam optimizers for both G and D
 # optimizerD = optim.Adam(disc.parameters(), lr=lr, betas=(beta1, 0.999))
-optimizerD = optim.SGD(disc.parameters(), lr=lr, momentum=0.9)
+optimizerD = optim.SGD(disc.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
 optimizerG = optim.Adam(gen.parameters(), lr=lr, betas=(beta1, 0.999))
 
 
@@ -112,7 +122,8 @@ for epoch in range(num_epochs):
         # Train with all-real batch
         disc.zero_grad()
         # Format batch
-        train_rev =  data[1].reshape(-1,1,7,126).float().to(device)
+        # train_rev =  data[1].reshape(-1,1,7,126).float().to(device)
+        train_rev =  torch.concat((data[0],data[1]), 3).float().to(device)
         # real_cpu = data[0].to(device)
         b_size = train_rev.size(0)
         label = torch.full((b_size,), real_label,
@@ -177,7 +188,19 @@ for epoch in range(num_epochs):
             img_list.append(fake)
 
         iters += 1
-
+    if epoch % 5 == 4:
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': gen.state_dict(),
+            'optimizer_state_dict': optimizerG.state_dict(),
+            'loss': errG.item(),
+            }, f'Generator_Epoch_{epoch}_loss_{errG.item()}.pt')
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': disc.state_dict(),
+            'optimizer_state_dict': optimizerD.state_dict(),
+            'loss': errD.item(),
+            }, f'Discriminator_Epoch_{epoch}_loss_{errD.item()}.pt')
 
 plt.figure(figsize=(10,5))
 plt.title("Generator and Discriminator Loss During Training")
@@ -197,7 +220,7 @@ grid = ImageGrid(fig, 111,  # similar to subplot(111)
                  nrows_ncols=(10, 1),  # creates 2x2 grid of axes
                  axes_pad=0.1,  # pad between axes in inch.
                  )
-
+gen.eval()
 l = []
 for i in range(10):
     with torch.no_grad():

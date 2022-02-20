@@ -12,9 +12,11 @@ import torchvision.transforms as transforms
 # Root directory for dataset
 root_dir= 'Data/room=[6,6,2.4]'
 # Number of workers for dataloader
-workers = 2
+# workers = 16
 # Batch size during training
 batch_size = 64
+
+w = 126
 
 # DEFINE DATASET
 class CustomImageDataset(Dataset):
@@ -32,17 +34,21 @@ class CustomImageDataset(Dataset):
             rev = os.path.join(root_dir,dir,rev_dir,'data_phase.npy' if is_test else 'Reverberated/data_phase.npy' )
             a = np.load(rev)
             if self.revs is None:
-                self.revs = np.copy(a[:,:,:126])
+                # self.revs = np.copy(a)      
+                self.revs = np.copy(a[:,:,:w])
             else:
-                self.revs = np.vstack((self.revs,a[:,:,:126]))
-            self.revs = np.vstack((self.revs,a[:,:,126:]))
+                # self.revs = np.vstack((self.revs,a))
+                self.revs = np.vstack((self.revs,a[:,:,:w]))
+            self.revs = np.vstack((self.revs,a[:,:,126:126+w]))
             target = os.path.join(root_dir,dir,target_dir,'data_phase.npy')
             b = np.load(target)
             if self.targets is None:
-                self.targets = np.copy(b[:,:,:126])
+                self.targets = np.copy(b[:,:,:w])
+                # self.targets = np.copy(b)
             else:
-                self.targets = np.vstack((self.targets,b[:,:,:126]))
-            self.targets = np.vstack((self.targets,b[:,:,:126]))
+                self.targets = np.vstack((self.targets,b[:,:,:w]))
+                # self.targets = np.vstack((self.targets,b))
+            self.targets = np.vstack((self.targets,b[:,:,126:126+w]))
 
         
     def __len__(self):
@@ -51,7 +57,12 @@ class CustomImageDataset(Dataset):
     def __getitem__(self, idx):
         reverberated_image = self.revs[idx, :, :].reshape(1,7,-1)
         target_image = self.targets[idx, :, :].reshape(1,7,-1)
-        return self._transform(torch.from_numpy(reverberated_image)), self._transform(torch.from_numpy(target_image))
+        reverberated_image= torch.from_numpy(reverberated_image)
+        target_image = torch.from_numpy(target_image)
+        reverberated_image = self._transform(reverberated_image)
+        target_image = self._transform(target_image)
+
+        return reverberated_image, target_image
 
 # training_data = CustomImageDataset(root_dir)
 # test_data = CustomImageDataset(root_dir, is_test=True)

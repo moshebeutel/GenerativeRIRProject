@@ -1,15 +1,14 @@
 import torch.nn as nn
 
 
-# Spatial size of training images. All images will be resized to this
-#   size using a transformer.
+# Spatial size of training images. 
 image_shape = (7, 126)
 
 # Number of channels in the training images. For color images this is 3
 nc = 1
 
 # Size of z latent vector (i.e. size of generator input)
-nz = 16
+nz = 14
 
 # Size of feature maps in generator
 ngf = 16
